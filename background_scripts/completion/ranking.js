@@ -1,15 +1,42 @@
 // Utilities which help us compute a relevancy score for a given item.
 
+import { hasChinese, toPinyin, toPinyinInitials } from "../../lib/pinyin.js";
+
+// Cache for pinyin conversions, keyed by the original string.
+const pinyinCache = new Map();
+
+// Returns [fullPinyin, initials] for a string. Cached to avoid redundant conversions.
+function getPinyinForms(str) {
+  if (!pinyinCache.has(str)) {
+    pinyinCache.set(str, [toPinyin(str), toPinyinInitials(str)]);
+  }
+  return pinyinCache.get(str);
+}
+
+// Returns true if the ASCII-only term matches the pinyin forms of the string.
+// We check two forms: full pinyin (e.g. "beijing" matches "北京") and
+// initials (e.g. "bj" matches "北京").
+function matchesPinyin(term, str) {
+  if (!hasChinese(str)) return false;
+  const [fullPinyin, initials] = getPinyinForms(str);
+  const re = RegexpCache.get(term);
+  return re.test(fullPinyin) || re.test(initials);
+}
+
 // Whether the given things (usually URLs or titles) match any one of the query terms.
 // This is used to prune out irrelevant suggestions before we try to rank them, and for
 // calculating word relevancy. Every term must match at least one thing.
+// When a term contains only ASCII letters and a thing contains Chinese characters, we
+// also check if the term matches the thing's pinyin (full or initials).
 export function matches(queryTerms, ...things) {
   for (const term of queryTerms) {
     const regexp = RegexpCache.get(term);
+    // Only attempt pinyin matching when term is purely ASCII letters.
+    const tryPinyin = /^[a-zA-Z]+$/.test(term);
     let matchedTerm = false;
     for (const thing of things) {
       if (!matchedTerm) {
-        matchedTerm = thing.match(regexp);
+        matchedTerm = thing.match(regexp) || (tryPinyin && matchesPinyin(term, thing));
       }
     }
     if (!matchedTerm) return false;
@@ -61,15 +88,31 @@ export function wordRelevancy(queryTerms, url, title) {
   let titleCount, titleScore;
   let urlScore = (titleScore = 0.0);
   let urlCount = (titleCount = 0);
+
+  // Pre-compute pinyin forms of the title if it contains Chinese characters, so we can
+  // also score ASCII query terms against the pinyin representation.
+  let pinyinTitle = null;
+  let initialsTitle = null;
+  if (title && hasChinese(title)) {
+    [pinyinTitle, initialsTitle] = getPinyinForms(title);
+  }
+
   // Calculate initial scores.
   for (const term of queryTerms) {
     let [s, c] = scoreTerm(term, url);
     urlScore += s;
     urlCount += c;
     if (title) {
-      [s, c] = scoreTerm(term, title);
-      titleScore += s;
-      titleCount += c;
+      let [ts, tc] = scoreTerm(term, title);
+      // For ASCII-only terms, also score against full pinyin and initials, taking the best.
+      if (pinyinTitle && /^[a-zA-Z]+$/.test(term)) {
+        const [ps, pc] = scoreTerm(term, pinyinTitle);
+        const [is, ic] = scoreTerm(term, initialsTitle);
+        if (ps > ts) { ts = ps; tc = pc; }
+        if (is > ts) { ts = is; tc = ic; }
+      }
+      titleScore += ts;
+      titleCount += tc;
     }
   }
 
@@ -81,7 +124,11 @@ export function wordRelevancy(queryTerms, url, title) {
 
   if (title) {
     titleScore /= maximumPossibleScore;
-    titleScore *= normalizeDifference(titleCount, title.length);
+    // When the match was against a pinyin form, titleCount may be in terms of the pinyin
+    // string length rather than the original title length. We normalize against whichever
+    // is larger to avoid inflating the score.
+    const titleLen = Math.max(title.length, pinyinTitle ? pinyinTitle.length : 0);
+    titleScore *= normalizeDifference(titleCount, titleLen);
   } else {
     titleScore = urlScore;
   }
