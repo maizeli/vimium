@@ -245,10 +245,36 @@ const onFocus = forTrusted(function (event) {
   }
 });
 
+// Runs when the user switches back to this tab. Two independent, configurable behaviors:
+//   1. normalModeOnTabSwitch: blur any focused editable element, so the user returns in normal mode.
+//   2. The mode indicator: briefly show the current mode in the HUD, color-coded (orange = insert,
+//      green = normal), so it's clear whether keystrokes will edit the page or run Vimium commands.
+// We only do this on the top frame.
+const onTabBecameVisible = forTrusted(function () {
+  if (document.visibilityState !== "visible") return;
+  if (!isEnabledForUrl) return;
+  if (!DomUtils.isTopFrame()) return;
+  if (!Settings.isLoaded()) return;
+
+  // Optionally force normal mode by blurring the focused editable element.
+  if (Settings.get("normalModeOnTabSwitch") && DomUtils.isFocusable(document.activeElement)) {
+    document.activeElement.blur();
+  }
+
+  // Briefly show the (possibly now updated) mode in the HUD, color-coded.
+  if (Settings.get("showModeIndicatorOnTabSwitch")) {
+    const inInsertMode = DomUtils.isFocusable(document.activeElement);
+    HUD.show(inInsertMode ? "Insert mode" : "Normal mode", 1500, {
+      hudClass: inInsertMode ? "hud-mode-insert" : "hud-mode-normal",
+    });
+  }
+});
+
 // We install these listeners directly (that is, we don't use installListener) because we still need
 // to receive events when Vimium is not enabled.
 globalThis.addEventListener("focus", onFocus, true);
 globalThis.addEventListener("hashchange", checkEnabledAfterURLChange, true);
+document.addEventListener("visibilitychange", onTabBecameVisible, true);
 
 async function initializeOnDomReady() {
   // Tell the background page we're in the domReady state.
@@ -272,6 +298,7 @@ const onUnload = Utils.makeIdempotent(() => {
   isEnabledForUrl = false;
   globalThis.removeEventListener("focus", onFocus, true);
   globalThis.removeEventListener("hashchange", checkEnabledAfterURLChange, true);
+  document.removeEventListener("visibilitychange", onTabBecameVisible, true);
 });
 
 function setScrollPosition({ scrollX, scrollY }) {

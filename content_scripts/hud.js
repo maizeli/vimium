@@ -73,12 +73,13 @@ const HUD = {
   },
 
   // duration - if omitted, the message will show until dismissed.
-  async show(text, duration) {
+  // options.hudClass - an optional CSS class to apply to the HUD box (e.g. to color-code the mode).
+  async show(text, duration, options = {}) {
     await DomUtils.documentComplete();
     clearTimeout(this._showForDurationTimerId);
     // @hudUI.activate will take charge of making it visible
     await this.init(false);
-    this.hudUI.show({ name: "show", text });
+    this.hudUI.show({ name: "show", text, hudClass: options.hudClass });
     this.tween.fade(1.0, 150);
 
     if (duration != null) {

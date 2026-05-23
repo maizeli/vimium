@@ -167,6 +167,25 @@ b: http://b.com/?q=%s description
 
         <h2></h2>
         <label class="boolean-label">
+          <input name="showModeIndicatorOnTabSwitch" type="checkbox" />
+          Show the current mode when switching tabs
+        </label>
+        <div class="example">
+          When enabled, switching to a tab briefly shows a color-coded indicator of the current mode
+          (orange for insert, green for normal).
+        </div>
+
+        <h2></h2>
+        <label class="boolean-label">
+          <input name="normalModeOnTabSwitch" type="checkbox" />
+          Return to normal mode when switching tabs
+        </label>
+        <div class="example">
+          When enabled, switching to a tab blurs any focused text field so you start in normal mode.
+        </div>
+
+        <h2></h2>
+        <label class="boolean-label">
           <input name="hideHud" type="checkbox" />
           Hide the Heads Up Display (HUD) in insert mode
         </label>

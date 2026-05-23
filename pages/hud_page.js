@@ -93,6 +93,11 @@ export const handlers = {
     el.classList.add("vimium-ui-component-visible");
     el.classList.remove("vimium-ui-component-hidden");
     el.classList.remove("hud-find");
+
+    // Apply an optional mode color to the HUD box (used by the mode indicator on tab switch).
+    const container = document.querySelector("#hud-container");
+    container.classList.remove("hud-mode-insert", "hud-mode-normal");
+    if (data.hudClass) container.classList.add(data.hudClass);
   },
 
   hidden() {
@@ -102,6 +107,10 @@ export const handlers = {
     el.textContent = "";
     el.classList.add("vimium-ui-component-hidden");
     el.classList.remove("vimium-ui-component-visible");
+    document.querySelector("#hud-container").classList.remove(
+      "hud-mode-insert",
+      "hud-mode-normal",
+    );
   },
 
   showFindMode() {

@@ -16,10 +16,12 @@ const options = {
   newTabCustomUrl: "string",
   newTabDestination: "option",
   nextPatterns: "string",
+  normalModeOnTabSwitch: "boolean",
   openVomnibarOnNewTabPage: "boolean",
   previousPatterns: "string",
   regexFindMode: "boolean",
   scrollStepSize: "number",
+  showModeIndicatorOnTabSwitch: "boolean",
   searchEngines: "string",
   settingsVersion: "string", // This is a hidden field.
   smoothScroll: "boolean",
