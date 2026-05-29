@@ -913,6 +913,48 @@ context("Insert mode", () => {
   });
 });
 
+context("Mode indicator", () => {
+  setup(() => {
+    initializeModeState();
+  });
+
+  should("passes configured indicator color to the HUD", () => {
+    const hudShowCalls = [];
+    stub(HUD, "show", (...args) => hudShowCalls.push(args));
+
+    const mode = new Mode();
+    mode.init({ indicator: "Visual mode", indicatorClass: "hud-mode-visual" });
+
+    assert.equal(
+      ["Visual mode", undefined, { hudClass: "hud-mode-visual" }],
+      hudShowCalls[hudShowCalls.length - 1],
+    );
+  });
+
+  should("colors insert mode and briefly shows normal mode after exit with permanent insert mode installed", () => {
+    const hudShowCalls = [];
+    stub(HUD, "show", (...args) => hudShowCalls.push(args));
+    stub(HUD, "hide", () => {});
+
+    const insertMode = new InsertMode({ global: true });
+    assert.equal(
+      ["Insert mode", undefined, { hudClass: "hud-mode-insert" }],
+      hudShowCalls[hudShowCalls.length - 1],
+    );
+
+    hudShowCalls.length = 0;
+    insertMode.exit();
+
+    assert.equal(
+      ["Normal mode", 1500, {
+        hudClass: "hud-mode-normal",
+        updateIndicatorOnHide: false,
+      }],
+      hudShowCalls[hudShowCalls.length - 1],
+    );
+  });
+});
+
 context("Triggering insert mode", () => {
   setup(() => {
     initializeModeState();
@@ -936,6 +978,57 @@ context("Triggering insert mode", () => {
     assert.isFalse(InsertMode.permanentInstance.isActive());
     document.getElementById("first").focus();
     assert.isTrue(InsertMode.permanentInstance.isActive());
+  });
+
+  should("shows insert mode HUD on focus of text input", () => {
+    const nextTickCallbacks = [];
+    const hudShowCalls = [];
+    stub(Utils, "setTimeout", (_ms, func) => nextTickCallbacks.push(func));
+    stub(HUD, "show", (...args) => hudShowCalls.push(args));
+
+    document.getElementById("first").focus();
+    nextTickCallbacks[0]();
+
+    assert.equal(
+      ["Insert mode", undefined, { hudClass: "hud-mode-insert" }],
+      hudShowCalls[hudShowCalls.length - 1],
+    );
+  });
+
+  should("does not show insert mode HUD for transient editable focus", () => {
+    const nextTickCallbacks = [];
+    const hudShowCalls = [];
+    stub(Utils, "setTimeout", (_ms, func) => nextTickCallbacks.push(func));
+    stub(HUD, "show", (...args) => hudShowCalls.push(args));
+    stub(HUD, "hide", () => {});
+
+    document.getElementById("first").focus();
+    document.getElementById("first").blur();
+    nextTickCallbacks[0]();
+
+    assert.equal([], hudShowCalls);
+  });
+
+  should("hides insert mode HUD on blur from text input", () => {
+    const hudHideCalls = [];
+    stub(HUD, "show", () => {});
+    stub(HUD, "hide", (...args) => hudHideCalls.push(args));
+
+    document.getElementById("first").focus();
+    document.getElementById("first").blur();
+
+    assert.equal([true, false], hudHideCalls[hudHideCalls.length - 1]);
+  });
+
+  should("hides insert mode HUD after escape in text input", () => {
+    const hudHideCalls = [];
+    stub(HUD, "show", () => {});
+    stub(HUD, "hide", (...args) => hudHideCalls.push(args));
+
+    document.getElementById("first").focus();
+    sendKeyboardEvent("Escape", "keydown");
+
+    assert.equal([true, false], hudHideCalls[hudHideCalls.length - 1]);
   });
 
   should("trigger insert mode on focus of password input", () => {

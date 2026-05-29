@@ -257,24 +257,39 @@ const onTabBecameVisible = forTrusted(function () {
   if (!Settings.isLoaded()) return;
 
   // Optionally force normal mode by blurring the focused editable element.
-  if (Settings.get("normalModeOnTabSwitch") && DomUtils.isFocusable(document.activeElement)) {
-    document.activeElement.blur();
-  }
-
-  // Briefly show the (possibly now updated) mode in the HUD, color-coded.
-  if (Settings.get("showModeIndicatorOnTabSwitch")) {
-    const inInsertMode = DomUtils.isFocusable(document.activeElement);
-    HUD.show(inInsertMode ? "Insert mode" : "Normal mode", 1500, {
-      hudClass: inInsertMode ? "hud-mode-insert" : "hud-mode-normal",
-    });
+  if (Settings.get("normalModeOnTabSwitch")) {
+    enterNormalModeFromTabSwitch();
+  } else {
+    // Briefly show the current mode in the HUD, color-coded.
+    showModeIndicatorOnTabSwitch();
   }
 });
 
-// We install these listeners directly (that is, we don't use installListener) because we still need
-// to receive events when Vimium is not enabled.
-globalThis.addEventListener("focus", onFocus, true);
-globalThis.addEventListener("hashchange", checkEnabledAfterURLChange, true);
-document.addEventListener("visibilitychange", onTabBecameVisible, true);
+function enterNormalModeFromTabSwitch() {
+  if (!DomUtils.isTopFrame()) return;
+  if (DomUtils.isFocusable(document.activeElement)) {
+    document.activeElement.blur();
+  }
+  showModeIndicatorOnTabSwitch();
+}
+
+function showModeIndicatorOnTabSwitch() {
+  if (!Settings.isLoaded()) return;
+  if (!Settings.get("showModeIndicatorOnTabSwitch")) return;
+
+  const inInsertMode = DomUtils.isFocusable(document.activeElement);
+  HUD.show(inInsertMode ? "Insert mode" : "Normal mode", 1500, {
+    hudClass: inInsertMode ? Mode.indicatorClasses.insert : Mode.indicatorClasses.normal,
+  });
+}
+
+function installAlwaysOnListeners() {
+  // We install these listeners directly (that is, we don't use installListener) because we still
+  // need to receive events when Vimium is not enabled.
+  globalThis.addEventListener("focus", onFocus, true);
+  globalThis.addEventListener("hashchange", checkEnabledAfterURLChange, true);
+  document.addEventListener("visibilitychange", onTabBecameVisible, true);
+}
 
 async function initializeOnDomReady() {
   // Tell the background page we're in the domReady state.
@@ -407,6 +422,7 @@ const messageHandlers = {
       return HintCoordinator[request.messageType](request, sender);
     }
   },
+  enterNormalModeFromTabSwitch,
   showMessage(request) {
     HUD.show(request.message, 2000);
   },
@@ -516,6 +532,7 @@ const HelpDialog = {
 
 const testEnv = globalThis.window == null;
 if (!testEnv) {
+  installAlwaysOnListeners();
   initWindowIsFocused();
   initializePreDomReady();
   DomUtils.documentReady().then(initializeOnDomReady);

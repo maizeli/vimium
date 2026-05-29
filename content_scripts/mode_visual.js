@@ -272,6 +272,10 @@ class VisualMode extends KeyHandlerMode {
     super.init(Object.assign(options, {
       name: options.name != null ? options.name : "visual",
       indicator: options.indicator != null ? options.indicator : "Visual mode",
+      indicatorClass: options.indicatorClass != null
+        ? options.indicatorClass
+        : Mode.indicatorClasses.visual,
+      showNormalModeOnExit: true,
       // Visual mode, visual-line mode and caret mode each displace each other.
       singleton: "visual-mode-group",
       exitOnEscape: true,

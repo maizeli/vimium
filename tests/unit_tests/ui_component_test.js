@@ -1,5 +1,6 @@
 import * as testHelper from "./test_helper.js";
 import "../../lib/utils.js";
+import "../../lib/settings.js";
 import "../../lib/dom_utils.js";
 import "../../lib/settings.js";
 import "../../content_scripts/ui_component.js";
@@ -19,6 +20,7 @@ context("UIComponent", () => {
   setup(async () => {
     // Which page we load doesn't matter; we just need any DOM.
     await testHelper.jsdomStub("pages/help_dialog_page.html");
+    await Settings.load();
     stub(Utils, "isFirefox", () => false);
     await Settings.onLoaded();
   });

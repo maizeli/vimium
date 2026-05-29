@@ -81,14 +81,28 @@ class Mode {
       keydown: this.options.keydown || null,
       keypress: this.options.keypress || null,
       keyup: this.options.keyup || null,
+      focus: this.options.focus || null,
+      blur: this.options.blur || null,
       indicator: () => {
         // Update the mode indicator. Setting @options.indicator to a string shows a mode indicator
         // in the HUD. Setting @options.indicator to 'false' forces no mode indicator.
+        // Setting @options.indicator to a function computes the indicator dynamically; returning
+        // null or undefined lets the request propagate to the next mode.
+        // Setting @options.indicatorClass applies a mode-specific color to that HUD.
         // If @options.indicator is undefined, then the request propagates to the next mode.
         // The active indicator can also be changed with @setIndicator().
-        if (this.options.indicator != null) {
-          if (this.options.indicator) {
-            HUD.show(this.options.indicator);
+        const indicator = typeof this.options.indicator === "function"
+          ? this.options.indicator()
+          : this.options.indicator;
+        if (indicator != null) {
+          if (indicator) {
+            if (this.options.indicatorClass) {
+              HUD.show(indicator, undefined, {
+                hudClass: this.options.indicatorClass,
+              });
+            } else {
+              HUD.show(indicator);
+            }
           } else {
             HUD.hide(true, false);
           }
@@ -251,7 +265,11 @@ class Mode {
     Mode.modes = Mode.modes.filter((mode) => mode !== this);
 
     this.modeIsActive = false;
-    return this.setIndicator();
+    const result = this.setIndicator();
+    if (this.options.showNormalModeOnExit && Mode.shouldShowNormalModeIndicator()) {
+      Mode.showNormalModeIndicator();
+    }
+    return result;
   }
 
   // Debugging routines.
@@ -282,12 +300,30 @@ class Mode {
     }
     this.modes = [];
   }
+
+  static shouldShowNormalModeIndicator() {
+    if (!Mode.modes.some((mode) => mode.name === "normal")) return false;
+    if (globalThis.document == null) return true;
+    return !DomUtils.isFocusable(document.activeElement);
+  }
+
+  static showNormalModeIndicator() {
+    HUD.show("Normal mode", 1500, {
+      hudClass: Mode.indicatorClasses.normal,
+      updateIndicatorOnHide: false,
+    });
+  }
 }
 
 // If Mode.debug is true, then we generate a trace of modes being activated and deactivated on the
 // console.
 Mode.debug = false;
 Mode.modes = [];
+Mode.indicatorClasses = {
+  insert: "hud-mode-insert",
+  normal: "hud-mode-normal",
+  visual: "hud-mode-visual",
+};
 
 class SuppressAllKeyboardEvents extends Mode {
   constructor(options) {

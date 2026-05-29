@@ -49,4 +49,13 @@ context("hud page", () => {
     await hudPage.onKeyEvent(newKeyEvent({ key: "Escape" }));
     assert.equal("hideFindMode", message.name);
   });
+
+  should("clears mode color classes when hidden", () => {
+    hudPage.handlers.show({ text: "Visual mode", hudClass: "hud-mode-visual" });
+    assert.isTrue(document.querySelector("#hud-container").classList.contains("hud-mode-visual"));
+
+    hudPage.handlers.hidden();
+
+    assert.isFalse(document.querySelector("#hud-container").classList.contains("hud-mode-visual"));
+  });
 });

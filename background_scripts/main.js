@@ -179,6 +179,14 @@ async function selectSpecificTab(request) {
   await chrome.tabs.update(request.id, { active: true });
 }
 
+async function enterNormalModeInSelectedTab(tabId) {
+  // Content scripts are not available on browser pages and other restricted URLs.
+  const swallowError = () => {};
+  await chrome.tabs.sendMessage(tabId, {
+    handler: "enterNormalModeFromTabSwitch",
+  }, { frameId: 0 }).catch(swallowError);
+}
+
 function moveTab({ count, tab, registryEntry }) {
   if (registryEntry.command === "moveTabLeft") {
     count = -count;
@@ -467,23 +475,27 @@ async function removeTabsRelative(direction, { count, tab }) {
 // Selects a tab before or after the currently selected tab.
 // - direction: "next", "previous", "first" or "last".
 function selectTab(direction, { count, tab }) {
-  chrome.tabs.query(visibleTabsQueryArgs, function (tabs) {
-    if (tabs.length > 1) {
-      const toSelect = (() => {
-        switch (direction) {
-          case "next":
-            return (getTabIndex(tab, tabs) + count) % tabs.length;
-          case "previous":
-            return ((getTabIndex(tab, tabs) - count) + (count * tabs.length)) % tabs.length;
-          case "first":
-            return Math.min(tabs.length - 1, count - 1);
-          case "last":
-            return Math.max(0, tabs.length - count);
-        }
-      })();
-      chrome.tabs.update(tabs[toSelect].id, { active: true });
-    }
-  });
+  return new Promise((resolve) =>
+    chrome.tabs.query(visibleTabsQueryArgs, async function (tabs) {
+      if (tabs.length > 1) {
+        const toSelect = (() => {
+          switch (direction) {
+            case "next":
+              return (getTabIndex(tab, tabs) + count) % tabs.length;
+            case "previous":
+              return ((getTabIndex(tab, tabs) - count) + (count * tabs.length)) % tabs.length;
+            case "first":
+              return Math.min(tabs.length - 1, count - 1);
+            case "last":
+              return Math.max(0, tabs.length - count);
+          }
+        })();
+        await chrome.tabs.update(tabs[toSelect].id, { active: true });
+        await enterNormalModeInSelectedTab(tabs[toSelect].id);
+      }
+      resolve();
+    })
+  );
 }
 
 chrome.webNavigation.onCommitted.addListener(async ({ tabId, frameId }) => {

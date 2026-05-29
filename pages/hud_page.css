@@ -21,9 +21,9 @@
   border-radius: 4px 4px 0 0;
 }
 
-/* Mode-indicator colors, applied to the HUD box when the user switches tabs. The whole box is
+/* Mode-indicator colors, applied to the HUD box when the user switches tabs or modes. The whole box is
  * filled with the mode color so the active mode is recognizable at a glance, without reading the
- * text (orange = insert, green = normal). */
+ * text (orange = insert, green = normal, blue = visual/caret). */
 #hud-container.hud-mode-insert {
   background-color: #e8821e;
   border-color: #c96a0c;
@@ -36,8 +36,15 @@
   color: #fff;
 }
 
+#hud-container.hud-mode-visual {
+  background-color: #3578c8;
+  border-color: #2762a7;
+  color: #fff;
+}
+
 #hud-container.hud-mode-insert #search-area,
-#hud-container.hud-mode-normal #search-area {
+#hud-container.hud-mode-normal #search-area,
+#hud-container.hud-mode-visual #search-area {
   color: #fff;
 }
 

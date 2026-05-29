@@ -57,9 +57,24 @@ class InsertMode extends Mode {
       return this.suppressEvent;
     };
 
+    const refreshModeIndicator = (event) => {
+      if (this.permanent) {
+        if (event.type === "focus") {
+          Utils.nextTick(() => this.setIndicator());
+        } else {
+          this.setIndicator();
+        }
+      }
+      return this.continueBubbling;
+    };
+
     const defaults = {
       name: "insert",
-      indicator: !this.permanent && !Settings.get("hideHud") ? "Insert mode" : null,
+      indicator: !Settings.get("hideHud") ? () => this.isActive() ? "Insert mode" : null : null,
+      indicatorClass: Mode.indicatorClasses.insert,
+      showNormalModeOnExit: !this.permanent && this.global,
+      focus: refreshModeIndicator,
+      blur: refreshModeIndicator,
       keypress: handleKeyEvent,
       keydown: handleKeyEvent,
     };

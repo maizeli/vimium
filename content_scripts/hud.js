@@ -74,6 +74,8 @@ const HUD = {
 
   // duration - if omitted, the message will show until dismissed.
   // options.hudClass - an optional CSS class to apply to the HUD box (e.g. to color-code the mode).
+  // options.updateIndicatorOnHide - whether hiding this HUD should refresh the active mode
+  // indicator.
   async show(text, duration, options = {}) {
     await DomUtils.documentComplete();
     clearTimeout(this._showForDurationTimerId);
@@ -83,7 +85,11 @@ const HUD = {
     this.tween.fade(1.0, 150);
 
     if (duration != null) {
-      this._showForDurationTimerId = setTimeout(() => this.hide(), duration);
+      const updateIndicatorOnHide = options.updateIndicatorOnHide ?? true;
+      this._showForDurationTimerId = setTimeout(
+        () => this.hide(false, updateIndicatorOnHide),
+        duration,
+      );
     }
   },
 

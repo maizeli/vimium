@@ -93,6 +93,32 @@ context("createTab command", () => {
   });
 });
 
+context("tab selection commands", () => {
+  should("ask the selected tab to enter normal mode", async () => {
+    const updatedTabs = [];
+    const messages = [];
+    const tabs = [
+      { id: 10, index: 0 },
+      { id: 20, index: 1 },
+    ];
+
+    stub(chrome.tabs, "query", (_query, callback) => callback(tabs));
+    stub(chrome.tabs, "update", async (tabId, properties) => {
+      updatedTabs.push([tabId, properties]);
+    });
+    stub(chrome.tabs, "sendMessage", async (tabId, message, options) => {
+      messages.push([tabId, message, options]);
+    });
+
+    await BackgroundCommands.nextTab({ count: 1, tab: tabs[0] });
+
+    assert.equal([[20, { active: true }]], updatedTabs);
+    assert.equal([
+      [20, { handler: "enterNormalModeFromTabSwitch" }, { frameId: 0 }],
+    ], messages);
+  });
+});
+
 context("Next zoom level", () => {
   // All these tests use the Chrome zoom levels, which are the default.
   should("Zoom in 0 times", async () => {
